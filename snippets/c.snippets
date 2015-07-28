@@ -1,5 +1,8 @@
 # main()
 snippet main
+	#include <stdio.h>
+	#include <stdlib.h>
+
 	int main(int argc, const char *argv[])
 	{
 		${1}
@@ -114,97 +117,41 @@ snippet fpr
 # This is kind of convenient
 snippet .
 	[${1}]${2}
-# GPL
-snippet gpl
-	/*
-	 * This program is free software; you can redistribute it and/or modify
-	 * it under the terms of the GNU General Public License as published by
-	 * the Free Software Foundation; either version 2 of the License, or
-	 * (at your option) any later version.
-	 *
-	 * This program is distributed in the hope that it will be useful,
-	 * but WITHOUT ANY WARRANTY; without even the implied warranty of
-	 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	 * GNU General Public License for more details.
-	 *
-	 * You should have received a copy of the GNU General Public License
-	 * along with this program; if not, write to the Free Software
-	 * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-	 *
-	 * Copyright (C) ${1:Author}, `strftime("%Y")`
-	 */
-	
-	${2}
 # Kernel stuff
 snippet un
 	unsigned
-snippet ts
-	struct task_struct *
-snippet dsp
-	struct scribe_ps *${1:scribe};
-snippet sp
-	struct scribe_ps *${2:scribe} = ${1:current}->scribe;
-snippet dsc
-	struct scribe_context *${1:ctx};
-snippet sc
-	struct scribe_context *${2:ctx} = ${1:scribe}->ctx;
+snippet zalloc
+	(struct ${1:type} *)zalloc(${2:zone});
+snippet bcpy
+	bcopy(${1:src}, ${2:dst}, ${3:sz});
 snippet sl
-	spin_lock(&${1:lock});
-	spin_unlock(&$1);
-snippet se
-	struct scribe_event_${1} *event;
-# main()
-snippet procfile
-	#include <linux/seq_file.h>
-	#include <linux/proc_fs.h>
-
-	static int ${1:subsys}_proc_show(struct seq_file *seq, void *offset)
+	lck_spin_lock(&${1:lock});
+	lck_spin_unlock(&$1);
+snippet ml
+	lck_mtx_lock(&${1:lock});
+	lck_mtx_unlock(&${1});
+# XNU stuff
+snippet sysctl
+	static int sysctl_${1:name} SYSCTL_HANDLER_ARGS
 	{
-		seq_printf(seq, "hello proc\n");
-		return 0;
+	#pragma unused(oidp, arg1, arg2)
+		int error;
+		${2:type} ${3:var};
+
+		error = SYSCTL_IN(req, &${3}, sizeof(${3});
+		if (error != 0)
+			return error;
 	}
 
-	static int $1_proc_open(struct inode *inode, struct file *file)
-	{
-		return single_open(file, $1_proc_show, PDE(inode)->data);
-	}
-	
-	static ssize_t $1_proc_write(struct file *file, const char __user * buffer, size_t count, loff_t * ppos)
-	{
-		const unsigned int len = ${2:maxinput};
-		char strbuf[len + 1];
-	
-		/* Don't write more than max input length, but please write something */
-		if (count > len || count == 0)
-			return -EFAULT;
-	
-		if (copy_from_user(strbuf, buffer, count))
-			return -EFAULT;
-	
-		strbuf[count] = '\0';
-
-		/* TODO: parse strbuf */
-
-		return count;
-	}
-	
-	static const struct file_operations $1_proc_fileops = {
-		.owner = THIS_MODULE,
-		.open = $1_proc_open,
-		.read = seq_read,
-		.write = $1_proc_write,
-		.llseek = seq_lseek,
-		.release = single_release,
-	};
-	
-	static __init int $1_proc_init(void)
-	{
-		struct proc_dir_entry *entry;
-	
-		entry = proc_create("${3:my_proc_file_name}", 0, NULL, &$1_proc_fileops);
-		if (!entry)
-			return -ENOMEM;
-		return 0;
-	}
-	
-	__initcall($1_proc_init);
+	SYSCTL_PROC(_${4:kern}, OID_AUTO, ${1}, CTLTYPE_${5:INT} | CTLFLAG_RW | CTLFLAG_LOCKED,
+		    ${6:NULL}, 0, sysctl_${1}, "${7:I}", "${8:descrip}");
+snippet sysctli
+	SYSCTL_INT(_${1:kern}, OID_AUTO, ${2:name}, CTLFLAG_${3:RW} | CTLFLAG_LOCKED, &${2}_val, 0, "${4}");
+snippet sysctlu
+	SYSCTL_UINT(_${1:kern}, OID_AUTO, ${2:name}, CTLFLAG_${3:RW} | CTLFLAG_LOCKED, &${2}_val, 0, "${4}");
+snippet sysctll
+	SYSCTL_LONG(_${1:kern}, OID_AUTO, ${2:name}, CTLFLAG_${3:RW} | CTLFLAG_LOCKED, &${2}_val, "${4}");
+snippet sysctlq
+	SYSCTL_QUAD(_${1:kern}, OID_AUTO, ${2:name}, CTLFLAG_${3:RW} | CTLFLAG_LOCKED, &${2}_val, "${4}");
+snippet sysctls
+	SYSCTL_STRING(_${1:kern}, OID_AUTO, ${2:name}, CTLFLAG_${3:RW} | CTLFLAG_LOCKED, &${4:var}, sizeof(${4}), "${5}");
